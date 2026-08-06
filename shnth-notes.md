@@ -144,9 +144,41 @@ twoo = from XOR twoo
 twoo = from ANDS twoo
 ```
 
+#### TRIG_IDEE_PRIMITIF(from, too, trigname, ref)
+
+Seemingly the same as `TRIG_IDEE_TOO` except that it uses the following three instructions instead of a single `usat` at the beginning to normalize `from` into 1 or 0:
+
+```
+cmp \from, 0
+it ne
+movne \from, 1
+```
+
+I assume this is needed in Thumb mode?
+
+#### LOADERH(vale, ref)
+
+Load halfword at `ref` offset by `lispMEX` * 2.
+
+```
+vale = *(ref + lispMEX * 2)
+```
+
+#### VAKLORD(value)
+
+Mask out everything but the bottom two bits of `lispMEX` to allow for addressing four places for this particular m-exp’s values in RAM. Then load a 16-bit value at `ref` into `vale`, offset by the newly masked `lispMEX`.
+
+```
+lispMEX = lispMEX & 3
+lispWOR = SYNTHLOADER(vale)
+lispACC = *(ref + lispMEX * 2)
+```
+
 ### <wanilla10trango.s>
 
 #### RECTA(out, reg)
+
+Rectify the value in `reg`.
 
 In Dirac mode:
 ```
@@ -157,6 +189,7 @@ end
 
 In Arab mode:
 ```
+  # this looks complicated, but is just a logical explanation of USAT
   shifted = reg << 16
   if shifted < 0
     out = 0
@@ -165,18 +198,17 @@ In Arab mode:
   end
 ```
 
-#### TRANGO_IDEE_NUME(acc, gwonzname)
+#### RECTAR(acc)
 
-```
-RECTA(lispRET, lispRET)
-bitband(workTWO, gwonzname, lispMEX)
-if (workTWO == 1)
-  acc = acc + (lispRET >> 4)
-else
-  acc = acc - (lispRET >> 4)
-end
-lispWOR[lispMEX << 1] = acc
-```
+Rectify value of register and put result back into same reg.
+
+#### RECTARET
+
+`RECTAR` the `lispRET` register.
+
+#### VAKLORDEIGHT(vale)
+
+Same as `VAKLORD`, except it masks the bottom THREE bits of `lispMEX` to allow for addressing 8 separate values.
 
 ## Opcodes
 
@@ -189,6 +221,29 @@ lispWOR[lispMEX << 1] = acc
 ### major
 
 ### horn
+
+Triangle bounds/bounce oscillator.
+
+#### Helpers
+
+##### TRANGO_IDEE_NUME(acc, gwonzname)
+
+Rectify the nume, check the gwonz (state) of this particular horn to see if it is rising or falling, and then add or subtract, respectively, the nume from `lispAcc`.
+
+```
+RECTA(lispRET, lispRET)
+bitband(workTWO, gwonzname, lispMEX)
+if (workTWO == 1)
+  acc = acc + (lispRET >> 4)
+else
+  acc = acc - (lispRET >> 4)
+end
+lispWOR[lispMEX << 1] = acc
+```
+
+#### TRANGO_IDEE_DENO(acc, gwonzname)
+
+
 
 ### saw
 
@@ -261,7 +316,11 @@ Generates noise the same way as `smoke` and also generates a ramp waveform that 
 
 ### gear
 
+A rising ramp, but only rises when triggered. Resets when the ramp exceeds DENO.
+
 ### pulse
+
+A falling ramp, is set to DENO when triggered, and then falls at a constant rate. If the DENO is changed part-way through the falling, if it the new DENO is lower than the ramp’s current value the ramp will drop to the new DENO.
 
 ### sauce
 
